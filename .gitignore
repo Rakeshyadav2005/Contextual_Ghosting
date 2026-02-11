@@ -1,0 +1,14 @@
+# Environments
+Contextual_Ghosting/
+env/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Data & Models (Local only)
+data/
+models/
+*.pth
+*.h5
