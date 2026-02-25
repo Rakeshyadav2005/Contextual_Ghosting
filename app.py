@@ -1,5 +1,6 @@
 import streamlit as st
 from src.image_engine import ImageGhoster
+from src.text_engine import TextGhoster  # 1. Uncommented
 from PIL import Image
 import os
 
@@ -9,22 +10,27 @@ st.set_page_config(page_title="Contextual Ghosting", page_icon="👻", layout="w
 st.title("👻 Contextual Ghosting")
 st.markdown("### Hybrid Adversarial Defense Framework")
 
-# Initialize Engine
+# Initialize Engines
 @st.cache_resource
-def get_ghoster():
-    return ImageGhoster()
+def get_engines():
+    # 2. Return both engines as a tuple
+    return ImageGhoster(), TextGhoster()
 
-ghoster = get_ghoster()
+# 3. Unpack both engines
+image_ghoster, text_ghoster = get_engines()
+
+# Sidebar Settings
+st.sidebar.header("🛡️ Defense Settings")
+eps = st.sidebar.slider("Protection Strength (Epsilon)", 0.001, 0.05, 0.01, format="%.3f")
 
 # Layout
 tab1, tab2 = st.tabs(["🖼️ Image Protection", "✍️ Text Protection"])
 
 with tab1:
-    st.header("Adversarial Image Ghosting")
+    st.header("Adversarial Image Ghosting (PGD)")
     uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "png", "jpeg"])
     
     if uploaded_file:
-        # Save temp file
         temp_path = os.path.join("data/raw", "ui_upload.jpg")
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
@@ -34,11 +40,10 @@ with tab1:
             st.image(uploaded_file, caption="Original Image", use_container_width=True)
             
         with col2:
-            with st.spinner("Applying Ghosting..."):
-                protected_img = ghoster.apply_protection(temp_path)
-                st.image(protected_img, caption="Protected (Ghosted) Image", use_container_width=True)
+            with st.spinner("Applying PGD Ghosting..."):
+                protected_img = image_ghoster.apply_pgd_protection(temp_path, epsilon=eps)
+                st.image(protected_img, caption=f"Protected (Epsilon: {eps})", use_container_width=True)
                 
-                # Save and Download
                 out_path = "data/processed/ui_output.jpg"
                 protected_img.save(out_path)
                 with open(out_path, "rb") as file:
@@ -46,4 +51,15 @@ with tab1:
 
 with tab2:
     st.header("Stylometric Text Shuffling")
-    st.info("Phase 2 Text Engine integration coming soon...")
+    user_text = st.text_area("Enter a sentence to protect your writing style:", height=150)
+    
+    if st.button("Ghost My Text"):
+        if user_text:
+            with st.spinner("Analyzing linguistic patterns..."):
+                # Use the text_ghoster engine we initialized at the top
+                protected_text = text_ghoster.shuffle_text(user_text)
+                st.subheader("Ghosted Output:")
+                st.success(protected_text)
+                st.download_button("Download Text", protected_text, file_name="ghosted_text.txt")
+        else:
+            st.warning("Please type something first!")
