@@ -2,13 +2,26 @@
 Contextual_Ghosting/
 env/
 venv/
+.conda/
 
 # Python
 __pycache__/
 *.pyc
+.DS_Store
 
-# Data & Models (Local only)
-data/
-models/
+# Data - Keep the folders, ignore the files
+data/raw/*
+data/processed/*
+# Use !.gitkeep if you have a .gitkeep file in those folders to keep them on GitHub
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Models - Ignore heavy weights but keep the folder
+models/*
+!models/.gitkeep
 *.pth
 *.h5
+*.bin
+
+# NLP
+nltk_data/
