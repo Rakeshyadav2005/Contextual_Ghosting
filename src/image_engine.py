@@ -5,31 +5,46 @@ from PIL import Image
 
 class ImageGhoster:
     def __init__(self):
-        # Load pre-trained ResNet50 to find image vulnerabilities
+        # Load the pre-trained ResNet50 model
         self.model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
-        self.model.eval()
+        self.model.eval()  # Set to evaluation mode
         
+        # Standard ImageNet transformations
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
         ])
+        
+        # To convert tensors back to viewable images
         self.undo_transform = transforms.ToPILImage()
 
-    def apply_protection(self, image_path, epsilon=0.02):
-        # Prepare image for the adversarial engine
-        raw_img = Image.open(image_path).convert('RGB')
-        img_tensor = self.transform(raw_img).unsqueeze(0)
-        img_tensor.requires_grad = True 
+    def apply_pgd_protection(self, image_path, epsilon=0.01, alpha=0.002, iters=10):
+        # 1. Load image and set up
+        img = Image.open(image_path).convert('RGB')
+        img_t = self.transform(img).unsqueeze(0)
+        original_img = img_t.clone().detach() 
         
-        # Calculate gradients
-        output = self.model(img_tensor)
-        loss = nn.CrossEntropyLoss()(output, output.max(1)[1])
+        # 2. Iterative loop (PGD Logic)
+        adv_img = img_t.clone().detach()
         
-        self.model.zero_grad()
-        loss.backward()
-        
-        # Apply FGSM: Add noise to the pixels
-        ghosted_tensor = img_tensor + epsilon * img_tensor.grad.data.sign()
-        ghosted_tensor = torch.clamp(ghosted_tensor, 0, 1)
-        
-        return self.undo_transform(ghosted_tensor.squeeze(0))
+        for i in range(iters):
+            adv_img.requires_grad = True
+            outputs = self.model(adv_img)
+            
+            # Use the predicted class as the target to push away from it
+            _, target = torch.max(outputs, 1)
+            loss = nn.CrossEntropyLoss()(outputs, target)
+            
+            self.model.zero_grad()
+            loss.backward()
+            
+            # Update step
+            with torch.no_grad():
+                # Move image in direction of gradient (increasing loss)
+                adv_img = adv_img + alpha * adv_img.grad.data.sign()
+                
+                # The "Project" Step: Ensure noise stays within epsilon of original
+                eta = torch.clamp(adv_img - original_img, min=-epsilon, max=epsilon)
+                adv_img = torch.clamp(original_img + eta, min=0, max=1).detach()
+            
+        return self.undo_transform(adv_img.squeeze(0))
