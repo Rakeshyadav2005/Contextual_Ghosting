@@ -1,8 +1,11 @@
 import streamlit as st
+import os
+import sys
+sys.path.append(os.path.abspath("src"))  # Ensure src is in the path
 from src.image_engine import ImageGhoster
 from src.text_engine import TextGhoster  # 1. Uncommented
 from PIL import Image
-import os
+
 
 # Page Config
 st.set_page_config(page_title="Contextual Ghosting", page_icon="👻", layout="wide")
