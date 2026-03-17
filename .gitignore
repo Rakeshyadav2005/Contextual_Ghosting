@@ -25,3 +25,5 @@ models/*
 
 # NLP
 nltk_data/
+
+.VSCode/
